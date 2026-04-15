@@ -4,6 +4,7 @@
   "description": "6-Pillar SMC/ICT Trading Platform with Multi-API Fallback and Gemini AI",
   "main": "server.js",
   "scripts": {
+    "build": "npm install",
     "start": "node server.js",
     "dev": "node server.js"
   },
