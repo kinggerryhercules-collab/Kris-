@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SMC ICT Pro — Signal Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-brand">
+    <span class="brand-icon">⚡</span>
+    <div>
+      <div class="brand-name">SMC ICT PRO</div>
+      <div class="brand-sub">6-Pillar Signal Engine · Powered by Gemini AI</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="session-pill" id="sessionBadge">
+      <span class="session-dot"></span>
+      <span id="sessionName">Loading…</span>
+    </div>
+    <div class="kz-pill" id="kzPill">
+      <span>🎯</span>
+      <span id="kzLabel">Kill Zone</span>
+      <span class="kz-time" id="killZoneTimer">--:--</span>
+    </div>
+    <div class="clock-pill" id="utcClock">00:00 UTC</div>
+  </div>
+</header>
+
+<!-- ── SENTIMENT BAR ───────────────────────────────────────────────── -->
+<div class="sentiment-bar">
+  <div class="sent-left">
+    <span id="sentEmoji">😐</span>
+    <span class="sent-label" id="sentLabel">NEUTRAL</span>
+  </div>
+  <div class="sent-track">
+    <div class="sent-fill" id="sentFill" style="width:50%"></div>
+    <div class="sent-ends"><span>FEAR</span><span>GREED</span></div>
+  </div>
+  <div class="sent-right">
+    <span class="sent-pct" id="sentPct">50% Bull</span>
+    <span class="sent-next">↻ <span id="nextRefresh">15:00</span></span>
+  </div>
+</div>
+
+<!-- ── TABS ───────────────────────────────────────────────────────── -->
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="markets" onclick="switchTab('markets')">📊 Markets</button>
+  <button class="tab-btn" data-tab="signals" onclick="switchTab('signals')">🎯 Signals</button>
+  <button class="tab-btn" data-tab="autoai"  onclick="switchTab('autoai')">🤖 Auto AI</button>
+  <button class="tab-btn" data-tab="history" onclick="switchTab('history')">📈 History</button>
+  <div class="tab-extras">
+    <select class="filter-sel" onchange="setFilter(this.value)">
+      <option value="all">All Assets</option>
+      <option value="crypto">Crypto</option>
+      <option value="forex">Forex</option>
+      <option value="index">Indices</option>
+      <option value="commodity">Commodities</option>
+    </select>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+  </div>
+</nav>
+
+<!-- ── PAGES ──────────────────────────────────────────────────────── -->
+<main class="page">
+
+  <div class="tab-pane active" id="tab-markets">
+    <div class="cards-grid" id="marketCards">
+      <div class="state-block"><div class="spinner"></div><p>Loading market data…</p></div>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="tab-signals">
+    <div class="cards-grid" id="signalCards">
+      <div class="state-block">
+        <div class="big-icon">🎯</div>
+        <p>No signals yet — tap <strong>Analyze</strong> on any pair in Markets</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="tab-autoai">
+    <div class="autoai-bar">
+      <div>
+        <h2>🤖 Auto AI Analysis</h2>
+        <p>Analyzes BTC, ETH, EUR/USD, GBP/USD &amp; S&amp;P 500 every 15 min.</p>
+      </div>
+      <button class="run-btn" onclick="runAutoAnalysis()">▶ Run Now</button>
+    </div>
+    <div class="cards-grid" id="autoaiCards">
+      <div class="state-block">
+        <div class="big-icon">🤖</div>
+        <p>Click <strong>Run Now</strong> or wait for auto-refresh</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="tab-history">
+    <div class="hstats" id="historyStats">
+      <div class="hstat"><span class="hstat-n" id="statTotal">0</span><span class="hstat-l">Signals</span></div>
+      <div class="hstat win"><span class="hstat-n" id="statWins">0</span><span class="hstat-l">Wins</span></div>
+      <div class="hstat loss"><span class="hstat-n" id="statLosses">0</span><span class="hstat-l">Losses</span></div>
+      <div class="hstat rate"><span class="hstat-n" id="statWinPct">--%</span><span class="hstat-l">Win Rate</span></div>
+    </div>
+    <div id="historyList" class="history-list">
+      <div class="state-block"><div class="big-icon">📈</div><p>No history yet</p></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── MODAL ──────────────────────────────────────────────────────── -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+
+    <!-- Topbar -->
+    <div class="modal-top">
+      <div class="modal-head-left">
+        <span class="modal-sym" id="modalSym">—</span>
+        <span class="modal-type" id="modalType"></span>
+      </div>
+      <div class="modal-head-right">
+        <span class="chip" id="modalChip">—</span>
+        <button class="modal-x" onclick="closeModal()">✕</button>
+      </div>
+    </div>
+
+    <!-- Price -->
+    <div class="modal-price-row">
+      <span class="modal-price" id="modalPrice">—</span>
+      <span class="modal-chg" id="modalChg"></span>
+    </div>
+
+    <!-- Confidence -->
+    <div class="modal-conf-row">
+      <span class="conf-lbl">Confidence</span>
+      <span class="conf-val" id="modalConf">—</span>
+    </div>
+    <div class="modal-conf-track"><div class="modal-conf-fill" id="modalConfFill"></div></div>
+
+    <!-- Levels row: Entry / TP / SL -->
+    <div class="modal-levels" id="modalLevels"></div>
+
+    <!-- Pattern tags -->
+    <div class="modal-tags" id="modalTags"></div>
+
+    <!-- TV Chart -->
+    <div class="chart-box" id="chartBox">
+      <div class="chart-loader"><div class="spinner sm"></div></div>
+    </div>
+
+    <!-- Bull / Bear / R:R tabs -->
+    <div class="atabs">
+      <button class="atab active" onclick="showATab('bull',this)">Bull</button>
+      <button class="atab"        onclick="showATab('bear',this)">Bear</button>
+      <button class="atab"        onclick="showATab('rr',this)">R:R</button>
+    </div>
+    <div class="atab-pane" id="ap-bull"></div>
+    <div class="atab-pane hidden" id="ap-bear"></div>
+    <div class="atab-pane hidden" id="ap-rr"></div>
+
+    <!-- 6 Pillars -->
+    <div class="pillars-section" id="pillarsSection"></div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <span id="modalSrc">📡 —</span>
+      <span id="modalTime">—</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+let markets = [], signals = {}, history = [];
+let activeTab = 'markets', activeFilter = 'all';
+let cdSec = 900, cdTimer;
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  startClock(); loadMarkets(); loadSignals(); startCD();
+  setInterval(loadMarkets, 60000);
+});
+
+/* ═══════════════════════════════════════════════════════════
+   CLOCK & SESSION
+═══════════════════════════════════════════════════════════ */
+function startClock() { tick(); setInterval(tick, 1000); }
+function tick() {
+  const n = new Date();
+  const h = n.getUTCHours(), m = n.getUTCMinutes();
+  document.getElementById('utcClock').textContent = `${p2(h)}:${p2(m)} UTC`;
+  updateSession(h, m);
+}
+function p2(n) { return String(n).padStart(2,'0'); }
+
+function updateSession(h, m) {
+  const badge = document.getElementById('sessionBadge');
+  const name  = document.getElementById('sessionName');
+  const kz    = document.getElementById('kzPill');
+  const kzT   = document.getElementById('killZoneTimer');
+  const kzL   = document.getElementById('kzLabel');
+
+  let ses = 'Inter-Session', cls = 'inter';
+  if (h >= 0  && h < 8)  { ses = '🌏 Asia';           cls = 'asia'; }
+  if (h >= 8  && h < 12) { ses = '🇬🇧 London';         cls = 'london'; }
+  if (h >= 12 && h < 16) { ses = '🔗 LDN+NY Overlap';  cls = 'overlap'; }
+  if (h >= 16 && h < 20) { ses = '🇺🇸 New York';        cls = 'ny'; }
+  badge.className = `session-pill ${cls}`; name.textContent = ses;
+
+  const tot = h*60+m;
+  const KZs = [{s:8*60,e:10*60,n:'London Open'},{s:12*60,e:14*60,n:'NY Open'}];
+  const inKZ = KZs.find(k => tot >= k.s && tot < k.e);
+  if (inKZ) {
+    const rem = inKZ.e - tot;
+    kz.classList.add('active');
+    kzL.textContent = inKZ.n + ' KZ';
+    kzT.textContent = `${p2(Math.floor(rem/60))}:${p2(rem%60)}`;
+  } else {
+    kz.classList.remove('active');
+    const nxt = KZs.find(k => tot < k.s) || KZs[0];
+    let d = nxt.s - tot; if(d<0) d+=1440;
+    kzL.textContent = 'Next KZ';
+    kzT.textContent = `${p2(Math.floor(d/60))}:${p2(d%60)}`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COUNTDOWN
+═══════════════════════════════════════════════════════════ */
+function startCD() {
+  clearInterval(cdTimer); cdSec = 900;
+  cdTimer = setInterval(()=>{
+    cdSec--;
+    const el = document.getElementById('nextRefresh');
+    if(el) el.textContent = `${p2(Math.floor(cdSec/60))}:${p2(cdSec%60)}`;
+    if(cdSec<=0){ cdSec=900; loadMarkets(); loadSignals(); }
+  },1000);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════════════════════ */
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+  if(tab==='history') { loadHistory(); }
+  if(tab==='autoai')  { renderAutoAI(); }
+  if(tab==='signals') { renderSignalCards(); }
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  renderMarketCards();
+  renderSignalCards();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DATA FETCHERS
+═══════════════════════════════════════════════════════════ */
+async function loadMarkets() {
+  try {
+    const r = await fetch('/api/trading/markets');
+    markets = await r.json();
+    renderMarketCards(); updateSentiment();
+  } catch(e) { showToast('Market data unavailable','error'); }
+}
+
+async function loadSignals() {
+  try {
+    const r = await fetch('/api/trading/signals');
+    const arr = await r.json();
+    arr.forEach(s=>{ signals[s.symbol]=s; });
+    renderMarketCards(); renderSignalCards(); updateSentiment();
+  } catch(e) {}
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch('/api/trading/history');
+    history = await r.json();
+    renderHistory(); updateHistoryStats();
+  } catch(e){}
+}
+
+async function refreshData() {
+  const btn=document.getElementById('refreshBtn');
+  const ic=document.getElementById('refreshIcon');
+  btn.disabled=true; ic.style.animation='spin 0.7s linear infinite';
+  await loadMarkets(); await loadSignals();
+  ic.style.animation=''; btn.disabled=false;
+  showToast('Refreshed ✓','success'); startCD();
+}
+
+async function runAutoAnalysis() {
+  showToast('🤖 Analyzing priority pairs…','info');
+  for(const sym of ['BTCUSDT','ETHUSDT','EURUSD','GBPUSD','SPX']) {
+    try {
+      const r = await fetch('/api/trading/analyze',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({symbol:sym})
+      });
+      const d = await r.json(); signals[sym]=d;
+    } catch(e){}
+    await new Promise(r=>setTimeout(r,600));
+  }
+  renderAutoAI(); renderSignalCards(); updateSentiment();
+  showToast('Auto AI complete ✓','success');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CARD BUILDER
+═══════════════════════════════════════════════════════════ */
+function buildCard(m) {
+  const sig    = signals[m.symbol];
+  const price  = fmtP(m.price, m.type);
+  const chgCls = (m.change24h||0) >= 0 ? 'pos' : 'neg';
+  const chgTxt = m.change24h!=null
+    ? `${m.change24h>=0?'+':''}${m.change24h.toFixed(2)}%` : '—';
+  const sigTxt = sig ? sig.signal : '—';
+  const sCls   = sig ? cClass(sig.signal) : '';
+  const conf   = sig ? confPct(sig) : null;
+
+  /* levels */
+  let lvl = '';
+  if(sig && sig.entryPrice) {
+    lvl = `
+    <div class="card-levels">
+      <div class="cl entry"><span class="cl-ic">⊙</span><div><div class="cl-l">Entry</div><div class="cl-v">${fmtP(sig.entryPrice)}</div></div></div>
+      <div class="cl tp">  <span class="cl-ic">⊙</span><div><div class="cl-l">TP</div>   <div class="cl-v green">${fmtP(sig.takeProfit)}</div></div></div>
+      <div class="cl sl">  <span class="cl-ic">🛡</span><div><div class="cl-l">SL</div>   <div class="cl-v red">${fmtP(sig.stopLoss)}</div></div></div>
+    </div>`;
+  }
+
+  /* tags */
+  let tags = '';
+  if(sig) {
+    tags = buildTags(sig).map(t=>`<span class="ptag ${t.c}">${t.l}</span>`).join('');
+  }
+
+  /* summary */
+  const summ = sig ? mkSummary(sig) : '';
+
+  return `
+  <div class="card" onclick="openModal('${m.symbol}')">
+    <div class="card-head">
+      <div class="card-hl">
+        <span class="card-sym">${m.display||m.symbol}</span>
+        <span class="card-type">${cap(m.type)}</span>
+      </div>
+      ${sig ? `<span class="chip ${sCls}">${sigTxt}</span>` : `<button class="analyze-btn" onclick="event.stopPropagation();analyzeOne('${m.symbol}')">▶ Analyze</button>`}
+    </div>
+
+    <div class="card-price-row">
+      <span class="card-price">${price}</span>
+      <span class="card-chg ${chgCls}">${chgTxt}</span>
+    </div>
+
+    ${conf!==null ? `
+    <div class="card-conf-hd"><span>Confidence</span><span>${conf}%</span></div>
+    <div class="conf-track"><div class="conf-fill ${sCls}" style="width:${conf}%"></div></div>
+    ` : ''}
+
+    ${lvl}
+
+    ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+
+    ${summ ? `<p class="card-summ">${summ}</p>` : ''}
+
+    <div class="card-foot">
+      ${sig
+        ? `<span class="re-analyze" onclick="event.stopPropagation();analyzeOne('${m.symbol}')">🔄 Re-analyze</span>`
+        : `<span class="re-analyze" onclick="event.stopPropagation();analyzeOne('${m.symbol}')">▶ Analyze</span>`}
+      <span class="cf-time">${sig ? ago(sig.analyzedAt) : ''}</span>
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER GRIDS
+═══════════════════════════════════════════════════════════ */
+function renderMarketCards() {
+  const el = document.getElementById('marketCards');
+  const list = markets.filter(m=>activeFilter==='all'||m.type===activeFilter);
+  if(!list.length){ el.innerHTML='<div class="state-block"><div class="spinner"></div><p>Loading…</p></div>'; return; }
+  el.innerHTML = list.map(m=>buildCard(m)).join('');
+}
+
+function renderSignalCards() {
+  const el = document.getElementById('signalCards');
+  const arr = Object.values(signals).filter(s=>activeFilter==='all'||s.type===activeFilter);
+  if(!arr.length){ el.innerHTML='<div class="state-block"><div class="big-icon">🎯</div><p>No signals yet — tap Analyze on any pair</p></div>'; return; }
+  el.innerHTML = arr.map(s=>{
+    const m = markets.find(x=>x.symbol===s.symbol)||{display:s.display,type:s.type,price:s.currentPrice,change24h:null};
+    return buildCard({...m,price:m.price||s.currentPrice});
+  }).join('');
+}
+
+function renderAutoAI() {
+  const el = document.getElementById('autoaiCards');
+  const arr = Object.values(signals);
+  if(!arr.length){ el.innerHTML='<div class="state-block"><div class="big-icon">🤖</div><p>No signals yet</p></div>'; return; }
+  el.innerHTML = arr.map(s=>{
+    const m = markets.find(x=>x.symbol===s.symbol)||{display:s.display,type:s.type,price:s.currentPrice,change24h:null};
+    return buildCard({...m,price:m.price||s.currentPrice});
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HISTORY
+═══════════════════════════════════════════════════════════ */
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if(!history.length){ el.innerHTML='<div class="state-block"><div class="big-icon">📈</div><p>No history yet</p></div>'; return; }
+  el.innerHTML = history.map(h=>`
+  <div class="hcard">
+    <div class="hcard-l">
+      <span class="hcard-sym">${h.display||h.symbol}</span>
+      <span class="hcard-t">${new Date(h.analyzedAt).toLocaleString()}</span>
+    </div>
+    <span class="chip ${cClass(h.signal)}">${h.signal}</span>
+    <div class="hcard-lev">
+      <span>E: ${fmtP(h.entryPrice)}</span>
+      <span class="red">SL: ${fmtP(h.stopLoss)}</span>
+      <span class="green">TP: ${fmtP(h.takeProfit)}</span>
+      <span class="gold">${h.riskReward||'—'}</span>
+    </div>
+    <div class="hcard-out">
+      <button class="ob win  ${h.outcome==='win'   ?'on':''}" onclick="setOutcome(${h.id},'win')">W</button>
+      <button class="ob loss ${h.outcome==='loss'  ?'on':''}" onclick="setOutcome(${h.id},'loss')">L</button>
+      <button class="ob pend ${h.outcome==='pending'?'on':''}" onclick="setOutcome(${h.id},'pending')">?</button>
+    </div>
+  </div>`).join('');
+}
+
+function updateHistoryStats() {
+  const w=history.filter(h=>h.outcome==='win').length;
+  const l=history.filter(h=>h.outcome==='loss').length;
+  const p=w+l>0?Math.round(w/(w+l)*100):0;
+  document.getElementById('statTotal').textContent  = history.length;
+  document.getElementById('statWins').textContent   = w;
+  document.getElementById('statLosses').textContent = l;
+  document.getElementById('statWinPct').textContent = `${p}%`;
+}
+
+async function setOutcome(id,outcome){
+  try{
+    await fetch('/api/trading/history',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,outcome})});
+    const h=history.find(x=>x.id===id); if(h)h.outcome=outcome;
+    renderHistory(); updateHistoryStats();
+  }catch(e){}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SENTIMENT
+═══════════════════════════════════════════════════════════ */
+function updateSentiment(){
+  const arr=Object.values(signals);
+  if(!arr.length) return;
+  const bulls=arr.filter(s=>s.signal?.includes('BUY')).length;
+  const total=arr.filter(s=>s.signal&&s.signal!=='NEUTRAL').length;
+  const pct=total>0?Math.round(bulls/total*100):50;
+  document.getElementById('sentFill').style.cssText=`width:${pct}%;background:${pct>=55?'#00e87a':pct<=45?'#ff3355':'#ffaa00'}`;
+  document.getElementById('sentLabel').textContent=pct>=65?'GREED':pct>=55?'BULLISH':pct<=35?'FEAR':pct<=45?'BEARISH':'NEUTRAL';
+  document.getElementById('sentEmoji').textContent=pct>=65?'🤑':pct>=55?'😊':pct<=35?'😱':pct<=45?'😟':'😐';
+  document.getElementById('sentPct').textContent=`${pct}% Bull`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ANALYZE ONE
+═══════════════════════════════════════════════════════════ */
+async function analyzeOne(symbol){
+  showToast(`Analyzing ${symbol}…`,'info');
+  try{
+    const r=await fetch('/api/trading/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol})});
+    const d=await r.json();
+    if(d.error&&!d.signal) throw new Error(d.error);
+    signals[symbol]=d;
+    renderMarketCards(); renderSignalCards(); updateSentiment();
+    showToast(`${symbol} analyzed ✓`,'success');
+  }catch(e){ showToast(`Error: ${e.message}`,'error'); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════════════════ */
+async function openModal(symbol){
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  const sig=signals[symbol];
+  const mkt=markets.find(m=>m.symbol===symbol)||{};
+
+  if(!sig){
+    // Show loading skeleton then analyze
+    setModalLoading(symbol, mkt);
+    await analyzeOne(symbol);
+    if(!signals[symbol]){ closeModal(); return; }
+  }
+  fillModal(symbol);
+}
+
+function setModalLoading(symbol, mkt){
+  document.getElementById('modalSym').textContent   = mkt.display||symbol;
+  document.getElementById('modalType').textContent  = cap(mkt.type||'');
+  document.getElementById('modalChip').textContent  = '…';
+  document.getElementById('modalChip').className    = 'chip';
+  document.getElementById('modalPrice').textContent = fmtP(mkt.price)||'—';
+  document.getElementById('modalChg').textContent   = '';
+  document.getElementById('modalConf').textContent  = '—';
+  document.getElementById('modalConfFill').style.width = '0%';
+  document.getElementById('modalLevels').innerHTML  = '<div class="modal-loading"><div class="spinner sm"></div><span>Running Gemini AI analysis…</span></div>';
+  document.getElementById('modalTags').innerHTML    = '';
+  document.getElementById('chartBox').innerHTML     = '<div class="chart-loader"><div class="spinner sm"></div></div>';
+  document.getElementById('pillarsSection').innerHTML='';
+  document.getElementById('ap-bull').innerHTML='';
+  document.getElementById('ap-bear').innerHTML='';
+  document.getElementById('ap-rr').innerHTML='';
+}
+
+function fillModal(symbol){
+  const sig = signals[symbol];
+  const mkt = markets.find(m=>m.symbol===symbol)||{};
+  if(!sig) return;
+
+  const conf  = confPct(sig);
+  const sCls  = cClass(sig.signal);
+
+  document.getElementById('modalSym').textContent   = sig.display||symbol;
+  document.getElementById('modalType').textContent  = cap(mkt.type||sig.type||'');
+  document.getElementById('modalChip').textContent  = sig.signal||'NEUTRAL';
+  document.getElementById('modalChip').className    = `chip ${sCls}`;
+  document.getElementById('modalPrice').textContent = fmtP(sig.currentPrice||mkt.price, mkt.type);
+  const chg = mkt.change24h;
+  document.getElementById('modalChg').textContent  = chg!=null?`${chg>=0?'+':''}${chg.toFixed(2)}%`:'';
+  document.getElementById('modalChg').className    = `modal-chg ${(chg||0)>=0?'pos':'neg'}`;
+  document.getElementById('modalConf').textContent = `${conf}%`;
+  document.getElementById('modalConfFill').style.width = `${conf}%`;
+  document.getElementById('modalConfFill').className = `modal-conf-fill ${sCls}`;
+  document.getElementById('modalSrc').textContent  = `📡 ${sig.dataSource||'local'}`;
+  document.getElementById('modalTime').textContent = sig.analyzedAt?new Date(sig.analyzedAt).toLocaleString():'';
+
+  /* levels */
+  if(sig.entryPrice){
+    document.getElementById('modalLevels').innerHTML=`
+    <div class="ml entry"><span class="ml-ic">⊙</span><div><div class="ml-l">Entry</div><div class="ml-v">${fmtP(sig.entryPrice)}</div></div></div>
+    <div class="ml tp">  <span class="ml-ic">⊙</span><div><div class="ml-l">TP</div>   <div class="ml-v green">${fmtP(sig.takeProfit)}</div></div></div>
+    <div class="ml sl">  <span class="ml-ic">🛡</span><div><div class="ml-l">SL</div>   <div class="ml-v red">${fmtP(sig.stopLoss)}</div></div></div>`;
+  } else {
+    document.getElementById('modalLevels').innerHTML='';
+  }
+
+  /* tags */
+  document.getElementById('modalTags').innerHTML = buildTags(sig).map(t=>`<span class="ptag ${t.c}">${t.l}</span>`).join('');
+
+  /* chart */
+  loadTV(symbol, tvSym(symbol));
+
+  /* analysis tabs */
+  document.getElementById('ap-bull').innerHTML = makeBull(sig);
+  document.getElementById('ap-bear').innerHTML = makeBear(sig);
+  document.getElementById('ap-rr').innerHTML   = makeRR(sig);
+  document.querySelectorAll('.atab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.atab-pane').forEach(p=>p.classList.add('hidden'));
+  document.querySelectorAll('.atab')[0].classList.add('active');
+  document.getElementById('ap-bull').classList.remove('hidden');
+
+  /* pillars */
+  document.getElementById('pillarsSection').innerHTML = makePillars(sig);
+}
+
+function showATab(id,btn){
+  document.querySelectorAll('.atab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.atab-pane').forEach(p=>p.classList.add('hidden'));
+  btn.classList.add('active');
+  document.getElementById(`ap-${id}`).classList.remove('hidden');
+}
+
+function makeBull(sig){
+  const li=[];
+  if(sig.p1?.passed&&sig.p1?.direction==='bullish') li.push(`✅ <strong>4H Trend:</strong> ${sig.p1.explanation}`);
+  if(sig.p2?.passed&&sig.p2?.direction==='bullish') li.push(`✅ <strong>15m Momentum:</strong> ${sig.p2.explanation}`);
+  if(sig.p3?.passed&&sig.p3?.direction==='bullish') li.push(`✅ <strong>Structure:</strong> ${sig.p3.explanation}`);
+  if((sig.p4?.score||0)>0) li.push(`📦 <strong>PD Array:</strong> ${sig.p4.explanation}`);
+  if(sig.p5?.zone==='discount') li.push(`📐 <strong>Fibonacci:</strong> ${sig.p5.explanation}`);
+  if((sig.p6?.score||0)>0) li.push(`💧 <strong>Liquidity:</strong> ${sig.p6.explanation}`);
+  if(!li.length) li.push('No bullish confirmations on this setup.');
+  return li.map(i=>`<p class="aline">${i}</p>`).join('');
+}
+
+function makeBear(sig){
+  const li=[];
+  if(sig.p1?.passed&&sig.p1?.direction==='bearish') li.push(`✅ <strong>4H Trend:</strong> ${sig.p1.explanation}`);
+  if(sig.p2?.passed&&sig.p2?.direction==='bearish') li.push(`✅ <strong>15m Momentum:</strong> ${sig.p2.explanation}`);
+  if(sig.p3?.passed&&sig.p3?.direction==='bearish') li.push(`✅ <strong>Structure:</strong> ${sig.p3.explanation}`);
+  if((sig.p4?.score||0)>0) li.push(`📦 <strong>PD Array:</strong> ${sig.p4.explanation}`);
+  if(sig.p5?.zone==='premium') li.push(`📐 <strong>Fibonacci:</strong> ${sig.p5.explanation}`);
+  if((sig.p6?.score||0)>0) li.push(`💧 <strong>Liquidity:</strong> ${sig.p6.explanation}`);
+  if(!li.length) li.push('No bearish confirmations on this setup.');
+  return li.map(i=>`<p class="aline">${i}</p>`).join('');
+}
+
+function makeRR(sig){
+  if(!sig.entryPrice) return '<p class="aline">No trade setup — signal is NEUTRAL.</p>';
+  const risk=Math.abs(sig.entryPrice-sig.stopLoss);
+  const rwd =Math.abs(sig.takeProfit-sig.entryPrice);
+  const rr  =risk>0?(rwd/risk).toFixed(2):'—';
+  return `
+  <div class="rr-grid">
+    <div class="rr-i"><span class="rr-l">Entry</span>        <span class="rr-v">${fmtP(sig.entryPrice)}</span></div>
+    <div class="rr-i"><span class="rr-l">Stop Loss</span>    <span class="rr-v red">${fmtP(sig.stopLoss)}</span></div>
+    <div class="rr-i"><span class="rr-l">Take Profit</span>  <span class="rr-v green">${fmtP(sig.takeProfit)}</span></div>
+    <div class="rr-i"><span class="rr-l">Risk</span>         <span class="rr-v">${fmtP(risk)}</span></div>
+    <div class="rr-i"><span class="rr-l">Reward</span>       <span class="rr-v green">${fmtP(rwd)}</span></div>
+    <div class="rr-i big"><span class="rr-l">Risk : Reward</span><span class="rr-v gold big">${sig.riskReward||'1:'+rr}</span></div>
+  </div>
+  <p class="rr-note">Score: ${sig.upgradeScore||0}/${sig.maxScore||14} pts — ${sig.signal}</p>`;
+}
+
+function makePillars(sig){
+  const rows=[
+    {n:'P1',name:'HTF Macro Bias (4H)',    pass:sig.p1?.passed, dir:sig.p1?.direction, pts:null, exp:sig.p1?.explanation, sub:sig.p1?`EMA5: ${fmtP(sig.p1.ema5)} · EMA13: ${fmtP(sig.p1.ema13)} · EMA89: ${fmtP(sig.p1.ema89)}`:''},
+    {n:'P2',name:'Momentum (15m)',         pass:sig.p2?.passed, dir:sig.p2?.direction, pts:null, exp:sig.p2?.explanation, sub:sig.p2?`EMA5: ${fmtP(sig.p2.ema5)} · EMA13: ${fmtP(sig.p2.ema13)}`:''},
+    {n:'P3',name:'Structure Break (5m)',   pass:sig.p3?.passed, dir:sig.p3?.direction, pts:null, exp:sig.p3?.explanation, sub:sig.p3?.patternDetected?`Pattern: ${sig.p3.patternDetected}`:''},
+    {n:'P4',name:'PD Array — OB / FVG',   pass:(sig.p4?.score||0)>0, dir:null, pts:sig.p4?.score, exp:sig.p4?.explanation, sub:sig.p4?.obZone&&sig.p4.obZone!=='none'?`OB Zone: ${sig.p4.obZone}`:''},
+    {n:'P5',name:'Value Zone (Fibonacci)', pass:(sig.p5?.score||0)>0, dir:null, pts:sig.p5?.score, exp:sig.p5?.explanation, sub:sig.p5?.zone?`Zone: ${sig.p5.zone} · Fib: ${sig.p5.fibLevel}`:''},
+    {n:'P6',name:'Liquidity Confirmation', pass:(sig.p6?.score||0)>0, dir:null, pts:sig.p6?.score, exp:sig.p6?.explanation, sub:sig.p6?.eventType?`Event: ${sig.p6.eventType}`:''},
+  ];
+  return `<div class="pill-hd">🔬 6-Pillar Breakdown</div>`
+    +rows.map(r=>`
+  <div class="pill-row ${r.pass?'pass':'fail'}">
+    <div class="pill-top">
+      <span class="pill-n">${r.n}</span>
+      <span class="pill-name">${r.name}</span>
+      <span class="pill-status">
+        ${r.pass?'✅':'❌'}
+        ${r.dir?`<span class="dir-badge ${r.dir}">${r.dir.toUpperCase()}</span>`:''}
+        ${r.pts!==null?`<span class="pts-badge">+${r.pts}pts</span>`:''}
+      </span>
+    </div>
+    ${r.sub?`<div class="pill-sub">${r.sub}</div>`:''}
+    <p class="pill-exp">${r.exp||'—'}</p>
+  </div>`).join('');
+}
+
+function closeModal(e){
+  if(e&&e.target!==document.getElementById('overlay')&&!e.target.classList.contains('modal-x'))return;
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TRADINGVIEW
+═══════════════════════════════════════════════════════════ */
+function loadTV(symbol, sym){
+  const box=document.getElementById('chartBox');
+  box.innerHTML=`<div id="tv_${symbol}"></div>`;
+  const mkWidget=()=>{
+    new TradingView.widget({
+      container_id:`tv_${symbol}`, symbol:sym,
+      interval:'15', timezone:'UTC', theme:'dark', style:'1',
+      locale:'en', toolbar_bg:'#111', height:310, width:'100%',
+      enable_publishing:false, hide_top_toolbar:false,
+    });
+  };
+  if(window.TradingView){ mkWidget(); return; }
+  const s=document.createElement('script');
+  s.src='https://s3.tradingview.com/tv.js';
+  s.onload=mkWidget;
+  document.head.appendChild(s);
+}
+
+function tvSym(s){
+  return {'BTCUSDT':'BINANCE:BTCUSDT','ETHUSDT':'BINANCE:ETHUSDT','SOLUSDT':'BINANCE:SOLUSDT',
+          'BNBUSDT':'BINANCE:BNBUSDT','XRPUSDT':'BINANCE:XRPUSDT','EURUSD':'FX:EURUSD',
+          'GBPUSD':'FX:GBPUSD','USDJPY':'FX:USDJPY','AUDUSD':'FX:AUDUSD','USDCAD':'FX:USDCAD',
+          'SPX':'SP:SPX','NAS100':'NASDAQ:NDX','US30':'DJ:DJI','GER40':'XETR:DAX','XAUUSD':'TVC:GOLD'}[s]||s;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════ */
+function cClass(sig){
+  if(!sig) return '';
+  if(sig==='STRONG BUY')  return 'sbuy';
+  if(sig==='BUY')         return 'buy';
+  if(sig==='STRONG SELL') return 'ssell';
+  if(sig==='SELL')        return 'sell';
+  return 'neutral';
+}
+
+function confPct(sig){
+  return Math.round(Math.min(100, 50 + (sig.upgradeScore||0)/14*50));
+}
+
+function buildTags(sig){
+  const t=[];
+  const d=sig.direction;
+  const dc=d==='bullish'?'tag-bull':d==='bearish'?'tag-bear':'tag-n';
+  if(sig.p3?.patternDetected==='BOS')   t.push({l:`${d==='bullish'?'Bullish':'Bearish'} BOS`,c:dc});
+  if(sig.p3?.patternDetected==='CHoCH') t.push({l:`${d==='bullish'?'Bullish':'Bearish'} CHoCH`,c:dc});
+  if(sig.p3?.patternDetected==='MSS')   t.push({l:`${d==='bullish'?'Bullish':'Bearish'} MSS`,c:dc});
+  if(sig.p4?.fvgInside)  t.push({l:`${d==='bullish'?'Bullish':'Bearish'} FVG`,c:dc});
+  if(sig.p4?.obTouch)    t.push({l:`${d==='bullish'?'Bullish':'Bearish'} Order Block`,c:dc});
+  if(sig.p6?.eventType==='SSL') t.push({l:'Liquidity Sweep (Sell Side)',c:'tag-liq'});
+  if(sig.p6?.eventType==='BSL') t.push({l:'Liquidity Sweep (Buy Side)',c:'tag-liq'});
+  if(sig.p6?.eventType==='CRT') t.push({l:'CRT Confirmed',c:'tag-liq'});
+  if(sig.p5?.zone==='discount') t.push({l:'Discount Zone',c:'tag-bull'});
+  if(sig.p5?.zone==='premium')  t.push({l:'Premium Zone',c:'tag-bear'});
+  return t;
+}
+
+function mkSummary(sig){
+  const parts=[];
+  if(sig.p3?.explanation) parts.push(sig.p3.explanation.slice(0,100));
+  if(sig.p6?.score>0&&sig.p6?.explanation) parts.push(sig.p6.explanation.slice(0,80));
+  const full=parts.join(' ');
+  return full.slice(0,170)+(full.length>170?'…':'');
+}
+
+function fmtP(p, type){
+  if(p==null||isNaN(p)) return '—';
+  if(p>=10000) return p.toLocaleString('en-US',{maximumFractionDigits:2});
+  if(p>=100)   return p.toFixed(2);
+  if(p>=1)     return p.toFixed(4);
+  return p.toFixed(6);
+}
+
+function cap(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):''; }
+
+function ago(ts){
+  if(!ts) return '';
+  const d=Math.floor((Date.now()-new Date(ts))/60000);
+  if(d<1) return 'just now';
+  if(d<60) return `${d}m ago`;
+  return `${Math.floor(d/60)}h ago`;
+}
+
+function showToast(msg,type='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>
