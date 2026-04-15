@@ -19,24 +19,47 @@ const GEMINI_KEY        = process.env.GEMINI_KEY        || '';
 
 // ─── INSTRUMENTS ────────────────────────────────────────────────────────────
 const INSTRUMENTS = [
-  // Crypto
-  { symbol: 'BTCUSDT',  display: 'BTC/USD',  type: 'crypto',  binance: 'BTCUSDT',  av: 'BTC',    yahoo: null         },
-  { symbol: 'ETHUSDT',  display: 'ETH/USD',  type: 'crypto',  binance: 'ETHUSDT',  av: 'ETH',    yahoo: null         },
-  { symbol: 'SOLUSDT',  display: 'SOL/USD',  type: 'crypto',  binance: 'SOLUSDT',  av: 'SOL',    yahoo: null         },
-  { symbol: 'BNBUSDT',  display: 'BNB/USD',  type: 'crypto',  binance: 'BNBUSDT',  av: 'BNB',    yahoo: null         },
-  { symbol: 'XRPUSDT',  display: 'XRP/USD',  type: 'crypto',  binance: 'XRPUSDT',  av: 'XRP',    yahoo: null         },
-  // Forex
-  { symbol: 'EURUSD',   display: 'EUR/USD',  type: 'forex',   binance: null,        av: 'EURUSD', yahoo: 'EURUSD=X'  },
-  { symbol: 'GBPUSD',   display: 'GBP/USD',  type: 'forex',   binance: null,        av: 'GBPUSD', yahoo: 'GBPUSD=X'  },
-  { symbol: 'USDJPY',   display: 'USD/JPY',  type: 'forex',   binance: null,        av: 'USDJPY', yahoo: 'USDJPY=X'  },
-  { symbol: 'AUDUSD',   display: 'AUD/USD',  type: 'forex',   binance: null,        av: 'AUDUSD', yahoo: 'AUDUSD=X'  },
-  { symbol: 'USDCAD',   display: 'USD/CAD',  type: 'forex',   binance: null,        av: 'USDCAD', yahoo: 'USDCAD=X'  },
-  // Indices
-  { symbol: 'SPX',      display: 'S&P 500',  type: 'index',   binance: null,        av: 'SPX',    yahoo: '^GSPC'     },
-  { symbol: 'NAS100',   display: 'NASDAQ',   type: 'index',   binance: null,        av: 'NDX',    yahoo: '^NDX'      },
-  { symbol: 'US30',     display: 'DOW 30',   type: 'index',   binance: null,        av: 'DJI',    yahoo: '^DJI'      },
-  { symbol: 'GER40',    display: 'DAX 40',   type: 'index',   binance: null,        av: 'DAX',    yahoo: '^GDAXI'    },
-  { symbol: 'XAUUSD',   display: 'GOLD',     type: 'commodity',binance: null,       av: 'XAUUSD', yahoo: 'GC=F'      },
+  // ── Crypto Majors ──────────────────────────────────────────────────────────
+  { symbol: 'BTCUSDT',  display: 'BTC/USD',   type: 'crypto',    binance: 'BTCUSDT',   av: 'BTC',     yahoo: 'BTC-USD'   },
+  { symbol: 'ETHUSDT',  display: 'ETH/USD',   type: 'crypto',    binance: 'ETHUSDT',   av: 'ETH',     yahoo: 'ETH-USD'   },
+  { symbol: 'SOLUSDT',  display: 'SOL/USD',   type: 'crypto',    binance: 'SOLUSDT',   av: 'SOL',     yahoo: 'SOL-USD'   },
+  { symbol: 'BNBUSDT',  display: 'BNB/USD',   type: 'crypto',    binance: 'BNBUSDT',   av: 'BNB',     yahoo: 'BNB-USD'   },
+  { symbol: 'XRPUSDT',  display: 'XRP/USD',   type: 'crypto',    binance: 'XRPUSDT',   av: 'XRP',     yahoo: 'XRP-USD'   },
+  { symbol: 'ADAUSDT',  display: 'ADA/USD',   type: 'crypto',    binance: 'ADAUSDT',   av: 'ADA',     yahoo: 'ADA-USD'   },
+  { symbol: 'AVAXUSDT', display: 'AVAX/USD',  type: 'crypto',    binance: 'AVAXUSDT',  av: 'AVAX',    yahoo: 'AVAX-USD'  },
+  { symbol: 'DOTUSDT',  display: 'DOT/USD',   type: 'crypto',    binance: 'DOTUSDT',   av: 'DOT',     yahoo: 'DOT-USD'   },
+  { symbol: 'LINKUSDT', display: 'LINK/USD',  type: 'crypto',    binance: 'LINKUSDT',  av: 'LINK',    yahoo: 'LINK-USD'  },
+  { symbol: 'LTCUSDT',  display: 'LTC/USD',   type: 'crypto',    binance: 'LTCUSDT',   av: 'LTC',     yahoo: 'LTC-USD'   },
+  { symbol: 'DOGEUSDT', display: 'DOGE/USD',  type: 'crypto',    binance: 'DOGEUSDT',  av: 'DOGE',    yahoo: 'DOGE-USD'  },
+  { symbol: 'MATICUSDT',display: 'MATIC/USD', type: 'crypto',    binance: 'MATICUSDT', av: 'MATIC',   yahoo: 'MATIC-USD' },
+  // ── Forex Majors ───────────────────────────────────────────────────────────
+  { symbol: 'EURUSD',   display: 'EUR/USD',   type: 'forex',     binance: null,        av: 'EURUSD',  yahoo: 'EURUSD=X'  },
+  { symbol: 'GBPUSD',   display: 'GBP/USD',   type: 'forex',     binance: null,        av: 'GBPUSD',  yahoo: 'GBPUSD=X'  },
+  { symbol: 'USDJPY',   display: 'USD/JPY',   type: 'forex',     binance: null,        av: 'USDJPY',  yahoo: 'USDJPY=X'  },
+  { symbol: 'AUDUSD',   display: 'AUD/USD',   type: 'forex',     binance: null,        av: 'AUDUSD',  yahoo: 'AUDUSD=X'  },
+  { symbol: 'USDCAD',   display: 'USD/CAD',   type: 'forex',     binance: null,        av: 'USDCAD',  yahoo: 'USDCAD=X'  },
+  { symbol: 'USDCHF',   display: 'USD/CHF',   type: 'forex',     binance: null,        av: 'USDCHF',  yahoo: 'USDCHF=X'  },
+  { symbol: 'NZDUSD',   display: 'NZD/USD',   type: 'forex',     binance: null,        av: 'NZDUSD',  yahoo: 'NZDUSD=X'  },
+  { symbol: 'GBPJPY',   display: 'GBP/JPY',   type: 'forex',     binance: null,        av: 'GBPJPY',  yahoo: 'GBPJPY=X'  },
+  { symbol: 'EURJPY',   display: 'EUR/JPY',   type: 'forex',     binance: null,        av: 'EURJPY',  yahoo: 'EURJPY=X'  },
+  { symbol: 'EURGBP',   display: 'EUR/GBP',   type: 'forex',     binance: null,        av: 'EURGBP',  yahoo: 'EURGBP=X'  },
+  { symbol: 'AUDJPY',   display: 'AUD/JPY',   type: 'forex',     binance: null,        av: 'AUDJPY',  yahoo: 'AUDJPY=X'  },
+  { symbol: 'CADJPY',   display: 'CAD/JPY',   type: 'forex',     binance: null,        av: 'CADJPY',  yahoo: 'CADJPY=X'  },
+  // ── Indices ────────────────────────────────────────────────────────────────
+  { symbol: 'SPX',      display: 'S&P 500',   type: 'index',     binance: null,        av: 'SPX',     yahoo: '^GSPC'     },
+  { symbol: 'NAS100',   display: 'NASDAQ 100',type: 'index',     binance: null,        av: 'NDX',     yahoo: '^NDX'      },
+  { symbol: 'US30',     display: 'DOW 30',    type: 'index',     binance: null,        av: 'DJI',     yahoo: '^DJI'      },
+  { symbol: 'GER40',    display: 'DAX 40',    type: 'index',     binance: null,        av: 'DAX',     yahoo: '^GDAXI'    },
+  { symbol: 'UK100',    display: 'FTSE 100',  type: 'index',     binance: null,        av: 'UK100',   yahoo: '^FTSE'     },
+  { symbol: 'JP225',    display: 'Nikkei 225',type: 'index',     binance: null,        av: 'JP225',   yahoo: '^N225'     },
+  { symbol: 'HK50',     display: 'Hang Seng', type: 'index',     binance: null,        av: 'HK50',    yahoo: '^HSI'      },
+  { symbol: 'AUS200',   display: 'ASX 200',   type: 'index',     binance: null,        av: 'AUS200',  yahoo: '^AXJO'     },
+  // ── Commodities ────────────────────────────────────────────────────────────
+  { symbol: 'XAUUSD',   display: 'Gold',      type: 'commodity', binance: null,        av: 'XAUUSD',  yahoo: 'GC=F'      },
+  { symbol: 'XAGUSD',   display: 'Silver',    type: 'commodity', binance: null,        av: 'XAGUSD',  yahoo: 'SI=F'      },
+  { symbol: 'USOIL',    display: 'WTI Oil',   type: 'commodity', binance: null,        av: 'WTI',     yahoo: 'CL=F'      },
+  { symbol: 'UKOIL',    display: 'Brent Oil', type: 'commodity', binance: null,        av: 'BRENT',   yahoo: 'BZ=F'      },
+  { symbol: 'NATGAS',   display: 'Nat. Gas',  type: 'commodity', binance: null,        av: 'NATGAS',  yahoo: 'NG=F'      },
 ];
 
 // ─── IN-MEMORY STORES ────────────────────────────────────────────────────────
@@ -615,26 +638,79 @@ function generateFallbackAnalysis(instrument, candles4h, candles15m, candles5m) 
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function fetchCurrentPrice(instrument) {
-  try {
-    if (instrument.binance) {
-      const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${instrument.binance}`, { timeout: 5000 });
-      const d = await res.json();
-      return { price: parseFloat(d.lastPrice), change24h: parseFloat(d.priceChangePercent), source: 'binance' };
-    }
-    if (instrument.yahoo) {
-      const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${instrument.yahoo}?interval=1m&range=2d`,
-        { timeout: 5000, headers: { 'User-Agent': 'Mozilla/5.0' } });
-      const data = await res.json();
-      const result = data?.chart?.result?.[0];
-      const meta = result?.meta;
-      if (meta) {
-        const price = meta.regularMarketPrice || meta.previousClose;
-        const prev = meta.chartPreviousClose || meta.previousClose;
-        const change = prev ? ((price - prev) / prev * 100) : 0;
-        return { price, change24h: change, source: 'yahoo' };
+  // 1) Binance — best for crypto (free, reliable)
+  if (instrument.binance) {
+    try {
+      const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${instrument.binance}`, { timeout: 6000 });
+      if (res.ok) {
+        const d = await res.json();
+        const price = parseFloat(d.lastPrice);
+        if (!isNaN(price) && price > 0)
+          return { price, change24h: parseFloat(d.priceChangePercent), source: 'binance' };
       }
+    } catch (e) {}
+  }
+
+  // 2) Yahoo Finance — works for forex, indices, commodities, and crypto
+  if (instrument.yahoo) {
+    for (const host of ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']) {
+      try {
+        const res = await fetch(
+          `https://${host}/v8/finance/chart/${encodeURIComponent(instrument.yahoo)}?interval=1d&range=5d`,
+          { timeout: 7000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
+        );
+        if (!res.ok) continue;
+        const data = await res.json();
+        const meta = data?.chart?.result?.[0]?.meta;
+        if (meta) {
+          const price = meta.regularMarketPrice || meta.previousClose;
+          const prev  = meta.chartPreviousClose  || meta.previousClose;
+          if (price && !isNaN(price) && price > 0) {
+            const change = prev ? ((price - prev) / prev * 100) : 0;
+            return { price, change24h: change, source: 'yahoo' };
+          }
+        }
+      } catch (e) {}
     }
-  } catch (e) {}
+  }
+
+  // 3) Frankfurter API — free, no key needed, covers major forex pairs
+  if (instrument.type === 'forex') {
+    try {
+      const base = instrument.symbol.slice(0, 3);
+      const quote = instrument.symbol.slice(3);
+      const res = await fetch(`https://api.frankfurter.app/latest?from=${base}&to=${quote}`, { timeout: 6000 });
+      if (res.ok) {
+        const data = await res.json();
+        const price = data?.rates?.[quote];
+        if (price && !isNaN(price) && price > 0)
+          return { price, change24h: 0, source: 'frankfurter' };
+      }
+    } catch (e) {}
+  }
+
+  // 4) CoinGecko — free backup for crypto
+  if (instrument.type === 'crypto' && instrument.binance) {
+    try {
+      const cgMap = {
+        BTCUSDT:'bitcoin', ETHUSDT:'ethereum', SOLUSDT:'solana', BNBUSDT:'binancecoin',
+        XRPUSDT:'ripple', ADAUSDT:'cardano', AVAXUSDT:'avalanche-2', DOTUSDT:'polkadot',
+        LINKUSDT:'chainlink', LTCUSDT:'litecoin', DOGEUSDT:'dogecoin',
+        MATICUSDT:'matic-network'
+      };
+      const id = cgMap[instrument.binance];
+      if (id) {
+        const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd&include_24hr_change=true`, { timeout: 6000 });
+        if (res.ok) {
+          const d = await res.json();
+          const price = d?.[id]?.usd;
+          if (price && !isNaN(price) && price > 0)
+            return { price, change24h: d[id].usd_24h_change || 0, source: 'coingecko' };
+        }
+      }
+    } catch (e) {}
+  }
+
   return { price: null, change24h: null, source: 'none' };
 }
 
@@ -738,7 +814,7 @@ app.get('/api/trading/auto-analysis', (req, res) => {
 
 async function runAutoAnalysis() {
   console.log('[AUTO] Running scheduled analysis at', new Date().toISOString());
-  const priority = ['BTCUSDT', 'ETHUSDT', 'EURUSD', 'GBPUSD', 'SPX'];
+  const priority = ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'EURUSD', 'GBPUSD', 'USDJPY', 'SPX', 'XAUUSD'];
   for (const sym of priority) {
     const instrument = INSTRUMENTS.find(i => i.symbol === sym);
     if (!instrument) continue;
