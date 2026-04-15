@@ -91,7 +91,7 @@
     <div class="autoai-bar">
       <div>
         <h2>🤖 Auto AI Analysis</h2>
-        <p>Analyzes BTC, ETH, EUR/USD, GBP/USD &amp; S&amp;P 500 every 15 min.</p>
+        <p>Analyzes BTC, ETH, XRP, EUR/USD, GBP/USD, USD/JPY, S&amp;P 500 &amp; Gold every 15 min.</p>
       </div>
       <button class="run-btn" onclick="runAutoAnalysis()">▶ Run Now</button>
     </div>
@@ -311,7 +311,7 @@ async function refreshData() {
 
 async function runAutoAnalysis() {
   showToast('🤖 Analyzing priority pairs…','info');
-  for(const sym of ['BTCUSDT','ETHUSDT','EURUSD','GBPUSD','SPX']) {
+  for(const sym of ['BTCUSDT','ETHUSDT','XRPUSDT','EURUSD','GBPUSD','USDJPY','SPX','XAUUSD']) {
     try {
       const r = await fetch('/api/trading/analyze',{
         method:'POST',headers:{'Content-Type':'application/json'},
@@ -687,10 +687,19 @@ function loadTV(symbol, sym){
 }
 
 function tvSym(s){
-  return {'BTCUSDT':'BINANCE:BTCUSDT','ETHUSDT':'BINANCE:ETHUSDT','SOLUSDT':'BINANCE:SOLUSDT',
-          'BNBUSDT':'BINANCE:BNBUSDT','XRPUSDT':'BINANCE:XRPUSDT','EURUSD':'FX:EURUSD',
-          'GBPUSD':'FX:GBPUSD','USDJPY':'FX:USDJPY','AUDUSD':'FX:AUDUSD','USDCAD':'FX:USDCAD',
-          'SPX':'SP:SPX','NAS100':'NASDAQ:NDX','US30':'DJ:DJI','GER40':'XETR:DAX','XAUUSD':'TVC:GOLD'}[s]||s;
+  const m={
+    'BTCUSDT':'BINANCE:BTCUSDT','ETHUSDT':'BINANCE:ETHUSDT','SOLUSDT':'BINANCE:SOLUSDT',
+    'BNBUSDT':'BINANCE:BNBUSDT','XRPUSDT':'BINANCE:XRPUSDT','ADAUSDT':'BINANCE:ADAUSDT',
+    'AVAXUSDT':'BINANCE:AVAXUSDT','DOTUSDT':'BINANCE:DOTUSDT','LINKUSDT':'BINANCE:LINKUSDT',
+    'LTCUSDT':'BINANCE:LTCUSDT','DOGEUSDT':'BINANCE:DOGEUSDT','MATICUSDT':'BINANCE:MATICUSDT',
+    'EURUSD':'FX:EURUSD','GBPUSD':'FX:GBPUSD','USDJPY':'FX:USDJPY','AUDUSD':'FX:AUDUSD',
+    'USDCAD':'FX:USDCAD','USDCHF':'FX:USDCHF','NZDUSD':'FX:NZDUSD','GBPJPY':'FX:GBPJPY',
+    'EURJPY':'FX:EURJPY','EURGBP':'FX:EURGBP','AUDJPY':'FX:AUDJPY','CADJPY':'FX:CADJPY',
+    'SPX':'SP:SPX','NAS100':'NASDAQ:NDX','US30':'DJ:DJI','GER40':'XETR:DAX',
+    'UK100':'SPREADEX:UK100','JP225':'TVC:NI225','HK50':'TVC:HSI','AUS200':'ASX:XJO',
+    'XAUUSD':'TVC:GOLD','XAGUSD':'TVC:SILVER','USOIL':'TVC:USOIL','UKOIL':'TVC:UKOIL','NATGAS':'TVC:NATURALGAS'
+  };
+  return m[s]||s;
 }
 
 /* ═══════════════════════════════════════════════════════════
