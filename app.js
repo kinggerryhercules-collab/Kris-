@@ -268,12 +268,15 @@ async function runAnalysis() {
       body: JSON.stringify({ symbol, shortName }),
     });
 
-    const data = await res.json();
+    let data = await res.json();
 
     if (data.error && !data.signal) {
       showError(data.error, data.recommendation);
       return;
     }
+
+    // Override SL/TP with 15-min ATR-based levels
+    data = await applyAtrLevels(data);
 
     lastAnalysis = { symbol, shortName };
     renderResults(data);
@@ -379,6 +382,15 @@ function renderResults(data) {
   document.getElementById('lvlRR').textContent     = data.riskReward ? `1 : ${(+data.riskReward).toFixed(2)}` : '—';
   document.getElementById('lvlSLReason').textContent = data.slReason || '';
   document.getElementById('lvlTPReason').textContent = data.tpReason || '';
+
+  // Show ATR badge if available
+  const atrBadgeEl = document.getElementById('lvlATR');
+  if (atrBadgeEl) {
+    atrBadgeEl.textContent = data.atr15m
+      ? `15m ATR(14): ${formatPrice(data.atr15m, data.symbol)}`
+      : '';
+    atrBadgeEl.style.display = data.atr15m ? '' : 'none';
+  }
 
   // ── Pillar Cards ──
   const pillarsGrid = document.getElementById('pillarsGrid');
@@ -788,6 +800,107 @@ function stopAutoRefresh() {
   if (autoRefreshCountdown) clearInterval(autoRefreshCountdown);
   if (autoRefreshTimer) clearTimeout(autoRefreshTimer);
   document.getElementById('refreshCountdown').textContent = 'PAUSED';
+}
+
+// ─── ATR-BASED SL/TP ─────────────────────────────────────────────────────────
+/**
+ * Fetch 15-min OHLC candles for a symbol using Yahoo Finance's public chart API.
+ * Returns an array of { high, low, close } objects (most recent last).
+ */
+async function fetch15mCandles(symbol) {
+  // Map internal symbols to Yahoo Finance format
+  let yfSym = symbol;
+  if (symbol.endsWith('USDT')) {
+    // Binance crypto → Yahoo Finance crypto ticker
+    yfSym = symbol.replace('USDT', '-USD');
+  }
+  // Yahoo Finance chart endpoint: 1-day range, 15m interval gives ~32 candles
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yfSym)}?interval=15m&range=2d&includePrePost=false`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Yahoo candle fetch failed: ${res.status}`);
+  const json = await res.json();
+  const result = json?.chart?.result?.[0];
+  if (!result) throw new Error('No candle data returned');
+  const timestamps = result.timestamp || [];
+  const q = result.indicators?.quote?.[0] || {};
+  const highs = q.high || [];
+  const lows  = q.low  || [];
+  const closes = q.close || [];
+  const candles = [];
+  for (let i = 0; i < timestamps.length; i++) {
+    if (highs[i] != null && lows[i] != null && closes[i] != null) {
+      candles.push({ high: highs[i], low: lows[i], close: closes[i] });
+    }
+  }
+  return candles;
+}
+
+/**
+ * Calculate ATR(period) from an array of { high, low, close } candles.
+ */
+function calcATR(candles, period = 14) {
+  if (candles.length < period + 1) return null;
+  // Compute True Range for each candle
+  const trs = [];
+  for (let i = 1; i < candles.length; i++) {
+    const { high, low } = candles[i];
+    const prevClose = candles[i - 1].close;
+    const tr = Math.max(
+      high - low,
+      Math.abs(high - prevClose),
+      Math.abs(low  - prevClose)
+    );
+    trs.push(tr);
+  }
+  // Simple average for first ATR value
+  let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  // Wilder smoothing for remaining values
+  for (let i = period; i < trs.length; i++) {
+    atr = (atr * (period - 1) + trs[i]) / period;
+  }
+  return atr;
+}
+
+/**
+ * Apply 15-min ATR-based SL/TP to an analysis result object.
+ * SL = entry ± 1.0× ATR14
+ * TP = entry ∓ 2.0× ATR14  (default 2:1 RR)
+ * Attaches atr15m, slReason, tpReason, and recalculated riskReward.
+ */
+async function applyAtrLevels(data) {
+  try {
+    const candles = await fetch15mCandles(data.symbol);
+    const atr = calcATR(candles, 14);
+    if (!atr || !data.entry) return data; // fallback: keep original levels
+
+    const entry = parseFloat(data.entry);
+    const signal = (data.signal || '').toUpperCase();
+    const isBull = signal.includes('BUY');
+    const isBear = signal.includes('SELL');
+    if (!isBull && !isBear) return data; // NEUTRAL — no trade levels needed
+
+    const SL_MULT = 1.0;
+    const TP_MULT = 2.0;
+
+    const stopLoss   = isBull ? entry - atr * SL_MULT : entry + atr * SL_MULT;
+    const takeProfit = isBull ? entry + atr * TP_MULT : entry - atr * TP_MULT;
+    const risk       = Math.abs(entry - stopLoss);
+    const reward     = Math.abs(takeProfit - entry);
+    const riskReward = risk > 0 ? (reward / risk).toFixed(2) : '—';
+
+    return {
+      ...data,
+      stopLoss,
+      takeProfit,
+      riskReward,
+      atr15m: atr,
+      slReason: `15m ATR(14) × ${SL_MULT} = ${formatPrice(atr, data.symbol)}`,
+      tpReason: `15m ATR(14) × ${TP_MULT} = ${formatPrice(atr * TP_MULT, data.symbol)} (2:1 RR)`,
+    };
+  } catch (e) {
+    console.warn('ATR calculation failed, keeping original levels:', e.message);
+    return data;
+  }
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
