@@ -317,9 +317,7 @@ async function runAutoAnalysis() {
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({symbol:sym})
       });
-      const d = await r.json();
-      const dAtr = await applyAtrLevels(d);
-      signals[sym]=dAtr;
+      const d = await r.json(); signals[sym]=d;
     } catch(e){}
     await new Promise(r=>setTimeout(r,600));
   }
@@ -492,10 +490,8 @@ async function analyzeOne(symbol){
   showToast(`Analyzing ${symbol}…`,'info');
   try{
     const r=await fetch('/api/trading/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol})});
-    let d=await r.json();
+    const d=await r.json();
     if(d.error&&!d.signal) throw new Error(d.error);
-    // Override SL/TP with 15-min ATR-based levels
-    d = await applyAtrLevels(d);
     signals[symbol]=d;
     renderMarketCards(); renderSignalCards(); updateSentiment();
     showToast(`${symbol} analyzed ✓`,'success');
@@ -625,11 +621,6 @@ function makeRR(sig){
   const risk=Math.abs(sig.entryPrice-sig.stopLoss);
   const rwd =Math.abs(sig.takeProfit-sig.entryPrice);
   const rr  =risk>0?(rwd/risk).toFixed(2):'—';
-  const atrBadge = sig.atr15m
-    ? `<div class="rr-i"><span class="rr-l">15m ATR(14)</span><span class="rr-v gold">${fmtP(sig.atr15m)}</span></div>`
-    : '';
-  const slNote = sig.slReason ? `<p class="rr-note atr-note">🛡 SL: ${sig.slReason}</p>` : '';
-  const tpNote = sig.tpReason ? `<p class="rr-note atr-note">🎯 TP: ${sig.tpReason}</p>` : '';
   return `
   <div class="rr-grid">
     <div class="rr-i"><span class="rr-l">Entry</span>        <span class="rr-v">${fmtP(sig.entryPrice)}</span></div>
@@ -637,12 +628,9 @@ function makeRR(sig){
     <div class="rr-i"><span class="rr-l">Take Profit</span>  <span class="rr-v green">${fmtP(sig.takeProfit)}</span></div>
     <div class="rr-i"><span class="rr-l">Risk</span>         <span class="rr-v">${fmtP(risk)}</span></div>
     <div class="rr-i"><span class="rr-l">Reward</span>       <span class="rr-v green">${fmtP(rwd)}</span></div>
-    ${atrBadge}
     <div class="rr-i big"><span class="rr-l">Risk : Reward</span><span class="rr-v gold big">${sig.riskReward||'1:'+rr}</span></div>
   </div>
-  ${slNote}${tpNote}
   <p class="rr-note">Score: ${sig.upgradeScore||0}/${sig.maxScore||14} pts — ${sig.signal}</p>`;
-}
 }
 
 function makePillars(sig){
@@ -771,70 +759,6 @@ function ago(ts){
   if(d<1) return 'just now';
   if(d<60) return `${d}m ago`;
   return `${Math.floor(d/60)}h ago`;
-}
-
-
-/* ═══════════════════════════════════════════════════════════
-   15-MIN ATR — STOP LOSS & TAKE PROFIT
-═══════════════════════════════════════════════════════════ */
-
-async function fetch15mCandles(symbol) {
-  let yfSym = symbol;
-  if (/^[A-Z0-9]+USDT$/.test(symbol)) yfSym = symbol.replace('USDT', '-USD');
-  const url =
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yfSym)}` +
-    `?interval=15m&range=2d&includePrePost=false`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Yahoo candle fetch: ${res.status}`);
-  const json = await res.json();
-  const result = json?.chart?.result?.[0];
-  if (!result) throw new Error('No candle data');
-  const q = result.indicators?.quote?.[0] || {};
-  const candles = [];
-  for (let i = 0; i < (q.high||[]).length; i++) {
-    if (q.high[i] != null && q.low[i] != null && q.close[i] != null)
-      candles.push({ high: q.high[i], low: q.low[i], close: q.close[i] });
-  }
-  return candles;
-}
-
-function calcATR(candles, period = 14) {
-  if (candles.length < period + 1) return null;
-  const trs = [];
-  for (let i = 1; i < candles.length; i++) {
-    const { high, low } = candles[i];
-    const pc = candles[i - 1].close;
-    trs.push(Math.max(high - low, Math.abs(high - pc), Math.abs(low - pc)));
-  }
-  let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  for (let i = period; i < trs.length; i++)
-    atr = (atr * (period - 1) + trs[i]) / period;
-  return atr;
-}
-
-async function applyAtrLevels(sig) {
-  try {
-    const candles = await fetch15mCandles(sig.symbol);
-    const atr     = calcATR(candles, 14);
-    const entry   = parseFloat(sig.entryPrice || sig.entry);
-    if (!atr || !entry) return sig;
-    const signal = (sig.signal || '').toUpperCase();
-    const isBull = signal.includes('BUY');
-    const isBear = signal.includes('SELL');
-    if (!isBull && !isBear) return sig;
-    const SL_MULT = 1.0, TP_MULT = 2.0;
-    const sl = isBull ? entry - atr * SL_MULT : entry + atr * SL_MULT;
-    const tp = isBull ? entry + atr * TP_MULT : entry - atr * TP_MULT;
-    sig.stopLoss   = sl;
-    sig.takeProfit = tp;
-    sig.riskReward = `1:${(Math.abs(tp - entry) / Math.abs(sl - entry)).toFixed(2)}`;
-    sig.atr15m     = atr;
-    sig.slReason   = `15m ATR(14) ×${SL_MULT} = ${fmtP(atr)}`;
-    sig.tpReason   = `15m ATR(14) ×${TP_MULT} (2:1 RR)`;
-  } catch(e) {
-    console.warn('ATR override skipped:', e.message);
-  }
-  return sig;
 }
 
 function showToast(msg,type='info'){
